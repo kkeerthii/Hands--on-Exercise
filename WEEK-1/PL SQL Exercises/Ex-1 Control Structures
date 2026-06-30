@@ -1,0 +1,97 @@
+CREATE TABLE Customers (
+ CustomerID NUMBER PRIMARY KEY,
+ Name VARCHAR2(100),
+ DOB DATE,
+ Balance NUMBER,
+ LastModified DATE
+);
+
+CREATE TABLE Loans (
+ LoanID NUMBER PRIMARY KEY,
+ CustomerID NUMBER,
+ LoanAmount NUMBER,
+ InterestRate NUMBER,
+ StartDate DATE,
+ EndDate DATE,
+ FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID)
+);
+
+INSERT INTO Customers VALUES
+(1,'John Doe',TO_DATE('1950-05-15','YYYY-MM-DD'),12000,SYSDATE);
+
+INSERT INTO Customers VALUES
+(2,'Jane Smith',TO_DATE('1995-07-20','YYYY-MM-DD'),8000,SYSDATE);
+
+INSERT INTO Customers VALUES
+(3,'Robert',TO_DATE('1948-02-10','YYYY-MM-DD'),15000,SYSDATE);
+
+INSERT INTO Loans VALUES
+(1,1,5000,5,SYSDATE,SYSDATE+20);
+
+INSERT INTO Loans VALUES
+(2,2,8000,6,SYSDATE,SYSDATE+40);
+
+INSERT INTO Loans VALUES
+(3,3,6000,7,SYSDATE,SYSDATE+15);
+
+COMMIT;
+
+SELECT * FROM Customers;
+SELECT * FROM Loans;
+
+--Scenario 1: The bank wants to apply a discount to loan interest rates for customers above 60 years old
+BEGIN
+   FOR cust IN (
+      SELECT CustomerID,
+             FLOOR(MONTHS_BETWEEN(SYSDATE, DOB)/12) AS Age
+      FROM Customers
+   )
+   LOOP
+      IF cust.Age > 60 THEN
+         UPDATE Loans
+         SET InterestRate = InterestRate - 1
+         WHERE CustomerID = cust.CustomerID;
+
+         DBMS_OUTPUT.PUT_LINE(
+            'Discount applied for Customer ID: ' || cust.CustomerID
+         );
+      END IF;
+   END LOOP;
+
+   COMMIT;
+END;
+/
+
+SELECT * FROM Loans;
+
+--Scenario 2: A customer can be promoted to VIP status based on their balance
+BEGIN
+   FOR cust IN (
+      SELECT CustomerID, Name, Balance
+      FROM Customers
+   )
+   LOOP
+      IF cust.Balance > 10000 THEN
+         DBMS_OUTPUT.PUT_LINE(
+            cust.Name || ' is a VIP customer'
+         );
+      END IF;
+   END LOOP;
+END;
+/
+
+--Scenario 3: The bank wants to send reminders to customers whose loans are due within the next 30 days
+BEGIN
+   FOR loan_rec IN (
+      SELECT LoanID, CustomerID, EndDate
+      FROM Loans
+      WHERE EndDate BETWEEN SYSDATE AND SYSDATE + 30
+   )
+   LOOP
+      DBMS_OUTPUT.PUT_LINE(
+         'Reminder: Loan ID ' || loan_rec.LoanID ||
+         ' due on ' || loan_rec.EndDate
+      );
+   END LOOP;
+END;
+/
